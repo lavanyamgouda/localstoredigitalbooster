@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stores — DigitalBooster</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <script src="js/auth.js"></script>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">DigitalBooster</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="../index.html">Dashboard</a></li>
+      <li><a href="stores.html" class="active">Stores</a></li>
+      <li><a href="orders.html">Orders</a></li>
+      <li><a href="products.html">Products</a></li>
+      <li><a href="analytics.html">Analytics</a></li>
+      <li><a href="campaigns.html">Campaigns</a></li>
+    </ul>
+    <div class="nav-actions">
+      <div class="avatar">AS</div>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div>
+      <h1>🏪 Stores</h1>
+      <p>Manage all registered local stores</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- FORM -->
+    <div>
+      <div class="form-wrap" id="storeFormWrap">
+        <h2 class="form-title" id="formTitle">Register New Store</h2>
+        <input type="hidden" id="storeId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Store Name *</label>
+            <input type="text" id="storeName" placeholder="e.g. Sharma General Store" required />
+          </div>
+          <div class="form-group">
+            <label>Owner Name *</label>
+            <input type="text" id="ownerName" placeholder="Full name" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone *</label>
+            <input type="tel" id="storePhone" placeholder="+91 98765 43210" required />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="storeEmail" placeholder="store@email.com" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Address *</label>
+          <input type="text" id="storeAddress" placeholder="Street address" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>City *</label>
+            <input type="text" id="storeCity" placeholder="City" required />
+          </div>
+          <div class="form-group">
+            <label>Pincode</label>
+            <input type="text" id="storePincode" placeholder="560001" maxlength="6" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="storeCategory">
+              <option value="">Select category</option>
+              <option>Grocery</option>
+              <option>Electronics</option>
+              <option>Clothing & Fashion</option>
+              <option>Pharmacy</option>
+              <option>Restaurant / Food</option>
+              <option>Stationery</option>
+              <option>Hardware</option>
+              <option>Salon / Beauty</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>GST Number</label>
+            <input type="text" id="storeGST" placeholder="22AAAAA0000A1Z5" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="storeDesc" rows="3" placeholder="Short store description..."></textarea>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="btn-submit" id="submitStoreBtn" onclick="submitStore()">Register Store</button>
+          <button class="btn-secondary" onclick="resetForm()" id="cancelBtn" style="display:none">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <div>
+      <div class="list-panel">
+        <div class="list-panel-header">
+          <h3>Registered Stores</h3>
+          <span class="count" id="storeCount">0</span>
+        </div>
+        <div class="search-bar">
+          <input type="text" placeholder="Search stores..." id="searchStore" oninput="filterStores(this.value)" />
+        </div>
+        <div id="storesList"><div class="list-empty">Loading stores...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    let allStores = [];
+
+    async function loadStores() {
+      try {
+        allStores = await API.get('/stores');
+        renderStores(allStores);
+        document.getElementById('storeCount').textContent = allStores.length;
+      } catch(e) {
+        document.getElementById('storesList').innerHTML = '<div class="list-empty">Could not load stores. Is the backend running?</div>';
+      }
+    }
+
+    function renderStores(stores) {
+      const el = document.getElementById('storesList');
+      if (!stores.length) { el.innerHTML = '<div class="list-empty">No stores registered yet.</div>'; return; }
+      el.innerHTML = stores.map(s => `
+        <div class="list-item" onclick="editStore('${s._id}')">
+          <div class="list-item-icon">${getCategoryEmoji(s.category)}</div>
+          <div class="list-item-info">
+            <div class="list-item-name">${s.name}</div>
+            <div class="list-item-sub">${s.city || ''} · ${s.category || 'Uncategorized'} · ${s.owner_name}</div>
+          </div>
+          <button class="btn-danger" onclick="event.stopPropagation();deleteStore('${s._id}')">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function filterStores(query) {
+      const q = query.toLowerCase();
+      renderStores(allStores.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        (s.city || '').toLowerCase().includes(q) ||
+        (s.category || '').toLowerCase().includes(q)
+      ));
+    }
+
+    function getCategoryEmoji(cat) {
+      const m = {'Grocery':'🛒','Electronics':'💻','Clothing & Fashion':'👗','Pharmacy':'💊',
+                 'Restaurant / Food':'🍽️','Stationery':'✏️','Hardware':'🔧','Salon / Beauty':'💇'};
+      return m[cat] || '🏪';
+    }
+
+    async function submitStore() {
+      const id = document.getElementById('storeId').value;
+      const payload = {
+        name: document.getElementById('storeName').value.trim(),
+        owner_name: document.getElementById('ownerName').value.trim(),
+        phone: document.getElementById('storePhone').value.trim(),
+        email: document.getElementById('storeEmail').value.trim(),
+        address: document.getElementById('storeAddress').value.trim(),
+        city: document.getElementById('storeCity').value.trim(),
+        pincode: document.getElementById('storePincode').value.trim(),
+        category: document.getElementById('storeCategory').value,
+        gst_number: document.getElementById('storeGST').value.trim(),
+        description: document.getElementById('storeDesc').value.trim(),
+      };
+      if (!payload.name || !payload.owner_name || !payload.phone || !payload.address || !payload.city) {
+        showToast('Please fill all required fields.', 'error'); return;
+      }
+      const btn = document.getElementById('submitStoreBtn');
+      btn.disabled = true; btn.textContent = id ? 'Updating...' : 'Registering...';
+      try {
+        if (id) { await API.put(`/stores/${id}`, payload); showToast('Store updated successfully!'); }
+        else     { await API.post('/stores', payload); showToast('Store registered successfully!'); }
+        resetForm(); loadStores();
+      } catch(e) { showToast(e.message, 'error'); }
+      finally { btn.disabled = false; btn.textContent = id ? 'Update Store' : 'Register Store'; }
+    }
+
+    function editStore(id) {
+      const s = allStores.find(x => x._id === id);
+      if (!s) return;
+      document.getElementById('storeId').value = s._id;
+      document.getElementById('storeName').value = s.name;
+      document.getElementById('ownerName').value = s.owner_name;
+      document.getElementById('storePhone').value = s.phone;
+      document.getElementById('storeEmail').value = s.email || '';
+      document.getElementById('storeAddress').value = s.address;
+      document.getElementById('storeCity').value = s.city;
+      document.getElementById('storePincode').value = s.pincode || '';
+      document.getElementById('storeCategory').value = s.category || '';
+      document.getElementById('storeGST').value = s.gst_number || '';
+      document.getElementById('storeDesc').value = s.description || '';
+      document.getElementById('formTitle').textContent = 'Edit Store';
+      document.getElementById('submitStoreBtn').textContent = 'Update Store';
+      document.getElementById('cancelBtn').style.display = 'block';
+      document.getElementById('storeFormWrap').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.getElementById('storeId').value = '';
+      ['storeName','ownerName','storePhone','storeEmail','storeAddress','storeCity',
+       'storePincode','storeGST','storeDesc'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('storeCategory').value = '';
+      document.getElementById('formTitle').textContent = 'Register New Store';
+      document.getElementById('submitStoreBtn').textContent = 'Register Store';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    async function deleteStore(id) {
+      if (!confirm('Delete this store? This cannot be undone.')) return;
+      try {
+        await API.delete(`/stores/${id}`);
+        showToast('Store deleted.'); loadStores();
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    loadStores();
+  </script>
+</body>
+</html>

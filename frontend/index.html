@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LocalStore DigitalBooster</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <script src="js/auth.js"></script>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">DigitalBooster</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Dashboard</a></li>
+      <li><a href="pages/stores.html">Stores</a></li>
+      <li><a href="pages/orders.html">Orders</a></li>
+      <li><a href="pages/products.html">Products</a></li>
+      <li><a href="pages/analytics.html">Analytics</a></li>
+      <li><a href="pages/campaigns.html">Campaigns</a></li>
+      <li><a href="pages/payments.html">Payments</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button class="btn-notif" id="notifBtn">🔔 <span class="badge">3</span></button>
+      <div class="avatar" id="userAvatar">AS</div>
+    </div>
+    <div class="action-card" onclick="location.href='pages/orders.html'">
+  <div class="card-icon">&#128203;</div>
+  <h3>Place Order</h3>
+  <p>Create new customer orders with GST invoice and bill generation.</p>
+  <span class="card-link">Open →</span>
+</div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <main>
+    <section class="hero">
+      <div class="hero-text">
+        <p class="hero-tag">LOCAL BUSINESS GROWTH PLATFORM</p>
+        <h1>Boost Your <span class="highlight">Local Store</span><br/>Into the Digital Age</h1>
+        <p class="hero-sub">Manage inventory, run campaigns, track analytics, and connect with customers — all in one powerful dashboard.</p>
+        <div class="hero-btns">
+          <a href="pages/stores.html" class="btn-primary">Get Started →</a>
+          <a href="pages/analytics.html" class="btn-ghost">View Analytics</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="stat-card" style="--delay:0s">
+          <span class="stat-num" data-target="1284">0</span>
+          <span class="stat-label">Active Stores</span>
+        </div>
+        <div class="stat-card" style="--delay:0.2s">
+          <span class="stat-num" data-target="48320">0</span>
+          <span class="stat-label">Products Listed</span>
+        </div>
+        <div class="stat-card" style="--delay:0.4s">
+          <span class="stat-num" data-target="9761">0</span>
+          <span class="stat-label">Orders Today</span>
+        </div>
+        <div class="stat-card" style="--delay:0.6s">
+          <span class="stat-num" data-target="94">0</span>
+          <span class="stat-label">% Uptime</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK ACTIONS -->
+    <section class="section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="cards-grid">
+        <div class="action-card" onclick="location.href='pages/stores.html'">
+          <div class="card-icon">🏪</div>
+          <h3>Register Store</h3>
+          <p>Add your local store to the platform and start reaching more customers today.</p>
+          <span class="card-link">Open →</span>
+        </div>
+        <div class="action-card" onclick="location.href='pages/products.html'">
+          <div class="card-icon">📦</div>
+          <h3>Add Products</h3>
+          <p>List your products with images, descriptions, and real-time stock updates.</p>
+          <span class="card-link">Open →</span>
+        </div>
+        <div class="action-card" onclick="location.href='pages/campaigns.html'">
+          <div class="card-icon">📣</div>
+          <h3>Run Campaign</h3>
+          <p>Launch targeted digital marketing campaigns for your local area.</p>
+          <span class="card-link">Open →</span>
+        </div>
+        <div class="action-card" onclick="location.href='pages/analytics.html'">
+          <div class="card-icon">📊</div>
+          <h3>View Analytics</h3>
+          <p>Understand your store performance with deep insights and reports.</p>
+          <span class="card-link">Open →</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECENT ACTIVITY -->
+    <section class="section">
+      <h2 class="section-title">Recent Activity</h2>
+      <div class="activity-table-wrap">
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Store</th>
+              <th>Action</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="activityBody">
+            <tr><td colspan="4" class="loading-row">Loading activity...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // Load recent activity on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      animateCounters();
+      await loadRecentActivity();
+    });
+
+    async function loadRecentActivity() {
+      try {
+        const data = await API.get('/stores?limit=5');
+        const tbody = document.getElementById('activityBody');
+        if (data && data.length > 0) {
+          tbody.innerHTML = data.map(s => `
+            <tr>
+              <td><strong>${s.name}</strong></td>
+              <td>${s.category || 'Store registered'}</td>
+              <td>${new Date(s.created_at || Date.now()).toLocaleTimeString()}</td>
+              <td><span class="badge-status ${s.active ? 'active' : 'inactive'}">${s.active ? 'Active' : 'Inactive'}</span></td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="4" class="loading-row">No recent activity. <a href="pages/stores.html">Add a store →</a></td></tr>`;
+        }
+      } catch(e) {
+        document.getElementById('activityBody').innerHTML = `<tr><td colspan="4" class="loading-row">Could not connect to backend. <a href="pages/stores.html">Try adding a store →</a></td></tr>`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Products — DigitalBooster</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 20px; }
+    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: var(--transition); }
+    .product-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow); }
+    .product-img { width: 100%; height: 160px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; overflow: hidden; }
+    .product-img img { width: 100%; height: 100%; object-fit: cover; }
+    .product-info { padding: 14px; }
+    .product-name { font-family: var(--font-head); font-size: 15px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-price { color: var(--accent); font-weight: 700; font-size: 16px; }
+    .product-mrp { color: var(--text2); font-size: 12px; text-decoration: line-through; margin-left: 6px; }
+    .product-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .product-actions button { flex: 1; padding: 7px; font-size: 12px; border-radius: 7px; cursor: pointer; font-family: var(--font-body); font-weight: 600; transition: var(--transition); }
+    .btn-edit { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+    .img-upload-wrap { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: var(--transition); }
+    .img-upload-wrap:hover { border-color: var(--accent); background: rgba(240,192,64,0.04); }
+    .img-preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none; }
+    .view-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 16px; transition: var(--transition); }
+    .view-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(240,192,64,0.08); }
+  </style>
+</head>
+<body>
+  <script src="js/auth.js"></script>
+  <nav class="navbar">
+    <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-name">DigitalBooster</span></div>
+    <ul class="nav-links">
+      <li><a href="../index.html">Dashboard</a></li>
+      <li><a href="stores.html">Stores</a></li>
+      <li><a href="orders.html">Orders</a></li>
+      <li><a href="products.html" class="active">Products</a></li>
+      <li><a href="analytics.html">Analytics</a></li>
+      <li><a href="campaigns.html">Campaigns</a></li>
+      <li><a href="payments.html">Payments</a></li>
+    </ul>
+    <div class="nav-actions"><div class="avatar">AS</div></div>
+  </nav>
+
+  <div class="page-header">
+    <div><h1>📦 Products</h1><p>Manage store inventory with images</p></div>
+    <div style="display:flex;gap:8px;">
+      <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')">⊞ Grid</button>
+      <button class="view-btn" id="listViewBtn" onclick="setView('list')">☰ List</button>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="form-wrap">
+        <h2 class="form-title" id="productFormTitle">Add New Product</h2>
+        <input type="hidden" id="productId" />
+        <input type="hidden" id="existingImageUrl" />
+
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label>Product Image</label>
+          <div class="img-upload-wrap" onclick="document.getElementById('imageFile').click()">
+            <div id="uploadPlaceholder">
+              <div style="font-size:32px;margin-bottom:8px">📸</div>
+              <div style="color:var(--text2);font-size:13px">Click to upload product image<br><span style="font-size:11px">JPG, PNG, WEBP — Max 2MB</span></div>
+            </div>
+            <img id="imgPreview" class="img-preview" alt="Preview" />
+          </div>
+          <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)" style="display:none" />
+        </div>
+
+        <div class="form-group">
+          <label>Store *</label>
+          <select id="productStore" required><option value="">Select store...</option></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Product Name *</label>
+            <input type="text" id="productName" placeholder="e.g. Tata Salt 1kg" />
+          </div>
+          <div class="form-group">
+            <label>SKU / Code</label>
+            <input type="text" id="productSKU" placeholder="SKU001" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Price (₹) *</label>
+            <input type="number" id="productPrice" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>MRP (₹)</label>
+            <input type="number" id="productMRP" placeholder="0.00" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stock Qty *</label>
+            <input type="number" id="productStock" placeholder="0" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Unit</label>
+            <select id="productUnit">
+              <option>pcs</option><option>kg</option><option>g</option>
+              <option>litre</option><option>ml</option><option>box</option>
+              <option>pack</option><option>dozen</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="productCategory">
+            <option value="">Select category</option>
+            <option>Groceries</option><option>Dairy</option><option>Beverages</option>
+            <option>Snacks</option><option>Electronics</option><option>Clothing</option>
+            <option>Medicines</option><option>Stationery</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="productDesc" rows="2" placeholder="Product details..."></textarea>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="btn-submit" id="submitProductBtn" onclick="submitProduct()">Add Product</button>
+          <button class="btn-secondary" onclick="resetProductForm()" id="cancelProductBtn" style="display:none">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <!-- Filters -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <input type="text" placeholder="🔍 Search products..." oninput="filterProducts(this.value)"
+          style="flex:1;min-width:150px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-size:14px;outline:none;font-family:var(--font-body)" />
+        <select id="filterByStore" onchange="filterProducts('')"
+          style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;">
+          <option value="">All Stores</option>
+        </select>
+        <select id="filterByCategory" onchange="filterProducts('')"
+          style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;">
+          <option value="">All Categories</option>
+          <option>Groceries</option><option>Dairy</option><option>Beverages</option>
+          <option>Snacks</option><option>Electronics</option><option>Clothing</option>
+          <option>Medicines</option><option>Stationery</option><option>Other</option>
+        </select>
+      </div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:14px">
+        Showing <strong id="showingCount" style="color:var(--text)">0</strong> products
+      </div>
+
+      <!-- Grid -->
+      <div id="productGrid" class="product-grid"></div>
+
+      <!-- List -->
+      <div id="productListView" style="display:none;">
+        <div class="list-panel">
+          <div class="list-panel-header">
+            <h3>All Products</h3>
+            <span class="count" id="productCount">0</span>
+          </div>
+          <div id="productListItems"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    let allProducts = [], allStores = [];
+
+    async function init() {
+      try {
+        allStores = await API.get('/stores');
+        const sel = document.getElementById('productStore');
+        const filterSel = document.getElementById('filterByStore');
+        allStores.forEach(s => {
+          sel.innerHTML += `<option value="${s._id}">${s.name}</option>`;
+          filterSel.innerHTML += `<option value="${s._id}">${s.name}</option>`;
+        });
+      } catch(e) {}
+      loadProducts();
+    }
+
+    async function loadProducts() {
+      try {
+        allProducts = await API.get('/products');
+        renderProducts(allProducts);
+      } catch(e) {
+        document.getElementById('productGrid').innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text2)">Could not load products.</div>';
+      }
+    }
+
+    function getCategoryEmoji(cat) {
+      const m = {'Groceries':'🛒','Dairy':'🥛','Beverages':'🥤','Snacks':'🍿',
+                 'Electronics':'💻','Clothing':'👗','Medicines':'💊','Stationery':'✏️'};
+      return m[cat] || '📦';
+    }
+
+    function renderProducts(products) {
+      document.getElementById('showingCount').textContent = products.length;
+      document.getElementById('productCount').textContent = products.length;
+
+      // Grid View
+      const grid = document.getElementById('productGrid');
+      if (!products.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text2)">No products found.</div>';
+      } else {
+        grid.innerHTML = products.map(p => {
+          const store = allStores.find(s => s._id === p.store_id);
+          const hasImg = p.image_url && p.image_url.length > 10;
+          const stockColor = p.stock_qty === 0 ? 'var(--red)' : p.stock_qty < 5 ? 'var(--accent)' : 'var(--green)';
+          const discount = p.mrp && p.mrp > p.price ? Math.round((1 - p.price/p.mrp)*100) : 0;
+          return `
+          <div class="product-card">
+            <div class="product-img">
+              ${hasImg ? `<img src="${p.image_url}" alt="${p.name}" />` : `<span>${getCategoryEmoji(p.category)}</span>`}
+              ${discount > 0 ? `<span style="position:absolute;top:8px;right:8px;background:var(--accent2);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px">${discount}% OFF</span>` : ''}
+            </div>
+            <div class="product-info">
+              <div class="product-name" title="${p.name}">${p.name}</div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${store ? store.name : ''}</div>
+              <div>
+                <span class="product-price">₹${p.price}</span>
+                ${p.mrp && p.mrp > p.price ? `<span class="product-mrp">₹${p.mrp}</span>` : ''}
+              </div>
+              <div style="font-size:12px;color:${stockColor};margin-top:4px">
+                ${p.stock_qty === 0 ? '❌ Out of Stock' : `✓ ${p.stock_qty} ${p.unit}`}
+              </div>
+              <div class="product-actions">
+                <button class="btn-edit" onclick="editProduct('${p._id}')">✏️ Edit</button>
+                <button class="btn-danger" onclick="deleteProduct('${p._id}')">🗑️</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // List View
+      const listEl = document.getElementById('productListItems');
+      listEl.innerHTML = products.length ? products.map(p => {
+        const store = allStores.find(s => s._id === p.store_id);
+        const hasImg = p.image_url && p.image_url.length > 10;
+        const stockClass = p.stock_qty === 0 ? 'down' : p.stock_qty < 5 ? '' : 'up';
+        return `
+        <div class="list-item" onclick="editProduct('${p._id}')">
+          <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">
+            ${hasImg ? `<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover" />` : getCategoryEmoji(p.category)}
+          </div>
+          <div class="list-item-info">
+            <div class="list-item-name">${p.name}</div>
+            <div class="list-item-sub">${store ? store.name : ''} · ₹${p.price} · <span class="metric-change ${stockClass}">${p.stock_qty} ${p.unit}</span></div>
+          </div>
+          <button class="btn-danger" onclick="event.stopPropagation();deleteProduct('${p._id}')">✕</button>
+        </div>`;
+      }).join('') : '<div class="list-empty">No products.</div>';
+    }
+
+    function setView(view) {
+      document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+      document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+      document.getElementById('productGrid').style.display     = view === 'grid' ? 'grid' : 'none';
+      document.getElementById('productListView').style.display = view === 'list' ? 'block' : 'none';
+    }
+
+    function filterProducts(query) {
+      const q = query ? query.toLowerCase() : document.querySelector('[placeholder*="Search"]').value.toLowerCase();
+      const storeFilter = document.getElementById('filterByStore').value;
+      const catFilter   = document.getElementById('filterByCategory').value;
+      let filtered = allProducts;
+      if (storeFilter) filtered = filtered.filter(p => p.store_id === storeFilter);
+      if (catFilter)   filtered = filtered.filter(p => p.category === catFilter);
+      if (q)           filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q));
+      renderProducts(filtered);
+    }
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { showToast('Image must be under 2MB', 'error'); return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview = document.getElementById('imgPreview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        document.getElementById('uploadPlaceholder').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function submitProduct() {
+      const id = document.getElementById('productId').value;
+      const fileInput = document.getElementById('imageFile');
+      let imageUrl = document.getElementById('existingImageUrl').value || '';
+
+      if (fileInput.files[0]) {
+        imageUrl = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.readAsDataURL(fileInput.files[0]);
+        });
+      }
+
+      const payload = {
+        store_id:    document.getElementById('productStore').value,
+        name:        document.getElementById('productName').value.trim(),
+        sku:         document.getElementById('productSKU').value.trim(),
+        price:       parseFloat(document.getElementById('productPrice').value) || 0,
+        mrp:         parseFloat(document.getElementById('productMRP').value) || 0,
+        stock_qty:   parseInt(document.getElementById('productStock').value) || 0,
+        unit:        document.getElementById('productUnit').value,
+        category:    document.getElementById('productCategory').value,
+        description: document.getElementById('productDesc').value.trim(),
+        image_url:   imageUrl,
+      };
+
+      if (!payload.store_id || !payload.name || payload.price <= 0) {
+        showToast('Store, name, and price are required.', 'error'); return;
+      }
+
+      const btn = document.getElementById('submitProductBtn');
+      btn.disabled = true; btn.textContent = id ? 'Updating...' : 'Adding...';
+      try {
+        if (id) { await API.put(`/products/${id}`, payload); showToast('Product updated! ✅'); }
+        else    { await API.post('/products', payload); showToast('Product added! 📦'); }
+        resetProductForm(); loadProducts();
+      } catch(e) { showToast(e.message, 'error'); }
+      finally { btn.disabled = false; btn.textContent = id ? 'Update Product' : 'Add Product'; }
+    }
+
+    function editProduct(id) {
+      const p = allProducts.find(x => x._id === id);
+      if (!p) return;
+      document.getElementById('productId').value = p._id;
+      document.getElementById('existingImageUrl').value = p.image_url || '';
+      document.getElementById('productStore').value = p.store_id;
+      document.getElementById('productName').value = p.name;
+      document.getElementById('productSKU').value = p.sku || '';
+      document.getElementById('productPrice').value = p.price;
+      document.getElementById('productMRP').value = p.mrp || '';
+      document.getElementById('productStock').value = p.stock_qty;
+      document.getElementById('productUnit').value = p.unit || 'pcs';
+      document.getElementById('productCategory').value = p.category || '';
+      document.getElementById('productDesc').value = p.description || '';
+      if (p.image_url) {
+        const preview = document.getElementById('imgPreview');
+        preview.src = p.image_url;
+        preview.style.display = 'block';
+        document.getElementById('uploadPlaceholder').style.display = 'none';
+      }
+      document.getElementById('productFormTitle').textContent = 'Edit Product';
+      document.getElementById('submitProductBtn').textContent = 'Update Product';
+      document.getElementById('cancelProductBtn').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetProductForm() {
+      document.getElementById('productId').value = '';
+      document.getElementById('existingImageUrl').value = '';
+      ['productName','productSKU','productPrice','productMRP','productStock','productDesc']
+        .forEach(id => document.getElementById(id).value = '');
+      document.getElementById('productStore').value = '';
+      document.getElementById('productCategory').value = '';
+      document.getElementById('imageFile').value = '';
+      document.getElementById('imgPreview').style.display = 'none';
+      document.getElementById('uploadPlaceholder').style.display = 'block';
+      document.getElementById('productFormTitle').textContent = 'Add New Product';
+      document.getElementById('submitProductBtn').textContent = 'Add Product';
+      document.getElementById('cancelProductBtn').style.display = 'none';
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('Delete this product?')) return;
+      try { await API.delete(`/products/${id}`); showToast('Product deleted.'); loadProducts(); }
+      catch(e) { showToast(e.message, 'error'); }
+    }
+
+    init();
+  </script>
+</body>
+</html>

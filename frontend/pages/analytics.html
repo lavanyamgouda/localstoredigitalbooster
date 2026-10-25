@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics — DigitalBooster</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <script src="js/auth.js"></script>
+  <nav class="navbar">
+    <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-name">DigitalBooster</span></div>
+    <ul class="nav-links">
+      <li><a href="../index.html">Dashboard</a></li>
+      <li><a href="stores.html">Stores</a></li>
+      <li><a href="orders.html">Orders</a></li>
+      <li><a href="products.html">Products</a></li>
+      <li><a href="analytics.html" class="active">Analytics</a></li>
+      <li><a href="campaigns.html">Campaigns</a></li>
+    </ul>
+    <div class="nav-actions"><div class="avatar">AS</div></div>
+  </nav>
+
+  <div class="page-header">
+    <div><h1>📊 Analytics</h1><p>Platform-wide performance overview</p></div>
+  </div>
+
+  <div class="section">
+    <div class="analytics-grid" id="metricsGrid">
+      <div class="metric-card"><div class="metric-label">Total Stores</div><div class="metric-value" id="metStores">—</div><div class="metric-change up" id="metStoresChange">Loading...</div></div>
+      <div class="metric-card"><div class="metric-label">Total Products</div><div class="metric-value" id="metProducts">—</div><div class="metric-change up" id="metProductsChange">Loading...</div></div>
+      <div class="metric-card"><div class="metric-label">Active Campaigns</div><div class="metric-value" id="metCampaigns">—</div><div class="metric-change up" id="metCampaignsChange">Loading...</div></div>
+      <div class="metric-card"><div class="metric-label">Avg. Products/Store</div><div class="metric-value" id="metAvg">—</div><div class="metric-change">per store</div></div>
+    </div>
+
+    <!-- BAR CHART - Stores by Category -->
+    <div class="chart-wrap">
+      <div class="chart-title">Stores by Category</div>
+      <div class="bar-chart" id="categoryChart">
+        <div class="list-empty" style="width:100%">Loading chart...</div>
+      </div>
+    </div>
+
+    <!-- BAR CHART - Products by Category -->
+    <div class="chart-wrap">
+      <div class="chart-title">Products by Category</div>
+      <div class="bar-chart" id="productChart">
+        <div class="list-empty" style="width:100%">Loading chart...</div>
+      </div>
+    </div>
+
+    <!-- Store Table -->
+    <div class="chart-wrap">
+      <div class="chart-title">Top Stores by Product Count</div>
+      <div class="activity-table-wrap" style="border:none;border-radius:0">
+        <table class="activity-table">
+          <thead><tr><th>Store</th><th>City</th><th>Category</th><th>Products</th><th>Status</th></tr></thead>
+          <tbody id="storeRankTable"><tr><td colspan="5" class="loading-row">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    async function loadAnalytics() {
+      try {
+        const [stores, products, campaigns] = await Promise.all([
+          API.get('/stores'),
+          API.get('/products'),
+          API.get('/campaigns'),
+        ]);
+
+        // Metrics
+        document.getElementById('metStores').textContent = stores.length;
+        document.getElementById('metProducts').textContent = products.length;
+        document.getElementById('metCampaigns').textContent = campaigns.filter(c => c.status === 'active').length;
+        document.getElementById('metAvg').textContent = stores.length ? (products.length / stores.length).toFixed(1) : '0';
+        document.getElementById('metStoresChange').textContent = `↑ ${stores.length} total registered`;
+        document.getElementById('metProductsChange').textContent = `↑ ${products.length} total listed`;
+        document.getElementById('metCampaignsChange').textContent = `${campaigns.length} total campaigns`;
+
+        // Category bar chart - stores
+        const catCount = {};
+        stores.forEach(s => { const c = s.category || 'Other'; catCount[c] = (catCount[c]||0)+1; });
+        renderBarChart('categoryChart', catCount);
+
+        // Product category chart
+        const pCatCount = {};
+        products.forEach(p => { const c = p.category || 'Other'; pCatCount[c] = (pCatCount[c]||0)+1; });
+        renderBarChart('productChart', pCatCount);
+
+        // Top stores table
+        const storeProductCount = {};
+        products.forEach(p => { storeProductCount[p.store_id] = (storeProductCount[p.store_id]||0)+1; });
+        const sorted = [...stores].sort((a,b) => (storeProductCount[b._id]||0) - (storeProductCount[a._id]||0)).slice(0,10);
+        document.getElementById('storeRankTable').innerHTML = sorted.map(s => `
+          <tr>
+            <td><strong>${s.name}</strong></td>
+            <td>${s.city||'—'}</td>
+            <td>${s.category||'—'}</td>
+            <td><strong>${storeProductCount[s._id]||0}</strong></td>
+            <td><span class="badge-status active">Active</span></td>
+          </tr>
+        `).join('');
+
+      } catch(e) {
+        showToast('Could not load analytics. Is the backend running?', 'error');
+      }
+    }
+
+    function renderBarChart(containerId, data) {
+      const container = document.getElementById(containerId);
+      const entries = Object.entries(data).sort((a,b) => b[1]-a[1]).slice(0,8);
+      if (!entries.length) { container.innerHTML = '<div class="list-empty" style="width:100%">No data</div>'; return; }
+      const max = Math.max(...entries.map(e => e[1]));
+      container.innerHTML = entries.map(([label, val]) => `
+        <div class="bar-wrap">
+          <div class="bar" style="height:${Math.max((val/max)*140,4)}px" title="${label}: ${val}"></div>
+          <div class="bar-label">${label.length > 8 ? label.slice(0,8)+'…' : label}</div>
+          <div style="font-size:11px;color:var(--accent);font-weight:700">${val}</div>
+        </div>
+      `).join('');
+    }
+
+    loadAnalytics();
+  </script>
+</body>
+</html>

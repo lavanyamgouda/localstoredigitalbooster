@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Orders - DigitalBooster</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+.order-status{display:inline-block;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600}
+.order-status.pending{background:rgba(240,192,64,0.12);color:var(--accent)}
+.order-status.completed{background:rgba(61,255,160,0.12);color:var(--green)}
+.order-status.cancelled{background:rgba(255,77,109,0.12);color:var(--red)}
+.items-table{width:100%;border-collapse:collapse;margin-top:12px}
+.items-table th{background:var(--bg3);padding:10px 12px;text-align:left;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text2)}
+.items-table td{padding:10px 12px;border-bottom:1px solid rgba(42,42,56,0.5);font-size:14px}
+.add-item-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:12px}
+.total-section{background:var(--bg3);border-radius:10px;padding:16px;margin-top:16px}
+.total-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.total-row.final{font-family:var(--font-head);font-size:18px;font-weight:800;color:var(--accent);border-top:1px dashed var(--border);margin-top:8px;padding-top:12px}
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;transition:var(--transition)}
+.order-card:hover{border-color:var(--accent)}
+.order-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.order-num{font-family:var(--font-head);font-size:16px;font-weight:700}
+.order-meta{color:var(--text2);font-size:13px;margin-bottom:12px}
+.order-actions{display:flex;gap:8px;margin-top:12px}
+.bill-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;overflow-y:auto;padding:20px}
+.bill-modal.show{display:flex}
+.bill-paper{background:#fff;color:#111;width:100%;max-width:600px;padding:40px;border-radius:8px;font-family:Arial,sans-serif;font-size:13px}
+.bill-header{text-align:center;border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:16px}
+.bill-company{font-size:22px;font-weight:800;letter-spacing:-1px}
+.bill-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.bill-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#888;font-weight:700;margin-bottom:3px}
+.bill-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.bill-table th{background:#f5f5f5;padding:8px;text-align:left;font-size:11px;border:1px solid #ddd;font-weight:700}
+.bill-table td{padding:8px;border:1px solid #ddd;font-size:12px}
+.bill-totals-wrap{margin-left:auto;width:240px}
+.bill-total-line{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #eee}
+.bill-total-line.grand{font-weight:800;font-size:15px;border-top:2px solid #111;border-bottom:none;margin-top:6px;padding-top:8px}
+.bill-footer-text{text-align:center;margin-top:20px;font-size:11px;color:#888;border-top:1px dashed #ddd;padding-top:12px}
+.bill-action-btns{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.btn-print-bill{background:#111;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif}
+.btn-close-modal{background:#eee;color:#111;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif}
+</style>
+</head>
+<body>
+<nav class="navbar">
+<div class="nav-brand"><span class="brand-icon">&#9889;</span><span class="brand-name">DigitalBooster</span></div>
+<ul class="nav-links">
+<li><a href="../index.html">Dashboard</a></li>
+<li><a href="stores.html">Stores</a></li>
+<li><a href="products.html">Products</a></li>
+<li><a href="orders.html" class="active">Orders</a></li>
+<li><a href="analytics.html">Analytics</a></li>
+<li><a href="campaigns.html">Campaigns</a></li>
+<li><a href="payments.html">Payments</a></li>
+</ul>
+<div class="nav-actions"><div class="avatar" id="userAvatar">AS</div></div>
+</nav>
+
+<div class="page-header">
+<div><h1>&#128203; Orders</h1><p>Create and manage customer orders with GST invoice</p></div>
+</div>
+
+<div class="two-col">
+<div>
+<div class="form-wrap">
+<h2 class="form-title" id="orderFormTitle">New Order</h2>
+<input type="hidden" id="orderId"/>
+<div class="form-group">
+<label>Store *</label>
+<select id="orderStore" onchange="loadStoreProducts()"><option value="">Select store...</option></select>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label>Customer Name *</label>
+<input type="text" id="custName" placeholder="Full name"/>
+</div>
+<div class="form-group">
+<label>Customer Phone</label>
+<input type="tel" id="custPhone" placeholder="9876543210"/>
+</div>
+</div>
+<div class="form-group">
+<label>Customer Address</label>
+<input type="text" id="custAddress" placeholder="Delivery address (optional)"/>
+</div>
+<div class="form-group">
+<label>Add Products</label>
+<div class="add-item-row">
+<select id="productSelect" onchange="autoFillPrice()"><option value="">Select product...</option></select>
+<input type="number" id="itemQty" placeholder="Qty" min="1" value="1"/>
+<input type="number" id="itemPrice" placeholder="Price" min="0" step="0.01"/>
+<button class="btn-submit" style="padding:11px 16px" onclick="addItem()">+ Add</button>
+</div>
+</div>
+<div id="itemsTableWrap" style="display:none">
+<table class="items-table">
+<thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
+<tbody id="itemsBody"></tbody>
+</table>
+<div class="total-section">
+<div class="total-row"><span>Subtotal</span><span id="subtotal">Rs.0</span></div>
+<div class="total-row">
+<span>GST
+<select id="gstPct" onchange="calcTotal()" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:3px 8px;border-radius:6px;font-size:12px;margin-left:6px">
+<option value="0">0%</option>
+<option value="5">5%</option>
+<option value="12">12%</option>
+<option value="18" selected>18%</option>
+<option value="28">28%</option>
+</select>
+</span>
+<span id="gstAmt">Rs.0</span>
+</div>
+<div class="total-row">
+<span>Discount (Rs.)</span>
+<input type="number" id="discount" value="0" min="0" onchange="calcTotal()"
+style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:13px;width:80px;text-align:right"/>
+</div>
+<div class="total-row final"><span>TOTAL</span><span id="grandTotal">Rs.0</span></div>
+</div>
+</div>
+<div class="form-row" style="margin-top:16px">
+<div class="form-group">
+<label>Payment Method</label>
+<select id="payMethod">
+<option value="cash">Cash</option>
+<option value="upi">UPI</option>
+<option value="card">Card</option>
+<option value="bank">Bank Transfer</option>
+<option value="credit">Credit / Khata</option>
+</select>
+</div>
+<div class="form-group">
+<label>Order Status</label>
+<select id="orderStatus">
+<option value="completed">Completed</option>
+<option value="pending">Pending</option>
+<option value="cancelled">Cancelled</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label>Notes</label>
+<textarea id="orderNotes" rows="2" placeholder="Any special instructions..."></textarea>
+</div>
+<div style="display:flex;gap:12px;margin-top:8px">
+<button class="btn-submit" id="submitOrderBtn" onclick="submitOrder()">Place Order</button>
+<button class="btn-secondary" id="cancelOrderBtn" onclick="resetOrderForm()" style="display:none">Cancel</button>
+</div>
+</div>
+</div>
+
+<div>
+<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+<input type="text" placeholder="Search orders..." oninput="filterOrders(this.value)"
+style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-size:14px;outline:none;font-family:var(--font-body)"/>
+<select id="filterStatus" onchange="filterOrders('')"
+style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px">
+<option value="">All Status</option>
+<option value="completed">Completed</option>
+<option value="pending">Pending</option>
+<option value="cancelled">Cancelled</option>
+</select>
+</div>
+<div style="color:var(--text2);font-size:13px;margin-bottom:14px">
+Total: <strong id="totalOrders" style="color:var(--accent)">0</strong> &nbsp;|&nbsp;
+Today: <strong id="todayOrders" style="color:var(--green)">0</strong> &nbsp;|&nbsp;
+Revenue: <strong id="totalRevenue" style="color:var(--accent)">Rs.0</strong>
+</div>
+<div id="ordersList"><div class="list-empty">No orders yet.</div></div>
+</div>
+</div>
+
+<!-- BILL MODAL -->
+<div class="bill-modal" id="billModal">
+<div class="bill-paper">
+<div class="bill-header">
+<div class="bill-company">DigitalBooster</div>
+<div style="font-size:12px;color:#666;margin-top:4px">LocalStore Management Platform</div>
+<div style="margin-top:8px;font-size:13px;font-weight:700">TAX INVOICE</div>
+</div>
+<div class="bill-info-grid" id="billInfo"></div>
+<table class="bill-table">
+<thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+<tbody id="billItems"></tbody>
+</table>
+<div class="bill-totals-wrap" id="billTotals"></div>
+<div class="bill-footer-text">Thank you for your business!<br/>Generated by DigitalBooster</div>
+<div class="bill-action-btns">
+<button class="btn-print-bill" onclick="window.print()">Print Invoice</button>
+<button class="btn-close-modal" id="closeBillBtn">Close</button>
+</div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+var allOrders = [];
+var allStores = [];
+var allProducts = [];
+var orderItems = [];
+
+document.getElementById('closeBillBtn').onclick = function() {
+  document.getElementById('billModal').classList.remove('show');
+};
+
+async function init() {
+  try {
+    allStores = await API.get('/stores');
+    var sel = document.getElementById('orderStore');
+    for (var i = 0; i < allStores.length; i++) {
+      sel.innerHTML += '<option value="' + allStores[i]._id + '">' + allStores[i].name + '</option>';
+    }
+    allProducts = await API.get('/products');
+  } catch(e) {}
+  loadOrders();
+}
+
+function loadStoreProducts() {
+  var storeId = document.getElementById('orderStore').value;
+  var sel = document.getElementById('productSelect');
+  sel.innerHTML = '<option value="">Select product...</option>';
+  for (var i = 0; i < allProducts.length; i++) {
+    if (allProducts[i].store_id === storeId) {
+      sel.innerHTML += '<option value="' + allProducts[i]._id + '" data-price="' + allProducts[i].price + '" data-name="' + allProducts[i].name + '">' + allProducts[i].name + ' - Rs.' + allProducts[i].price + '</option>';
+    }
+  }
+}
+
+function autoFillPrice() {
+  var sel = document.getElementById('productSelect');
+  var opt = sel.options[sel.selectedIndex];
+  var price = opt.getAttribute('data-price');
+  if (price) document.getElementById('itemPrice').value = price;
+}
+
+function addItem() {
+  var sel = document.getElementById('productSelect');
+  var opt = sel.options[sel.selectedIndex];
+  var name = opt.getAttribute('data-name') || '';
+  var productId = sel.value;
+  var qty = parseInt(document.getElementById('itemQty').value) || 1;
+  var price = parseFloat(document.getElementById('itemPrice').value) || 0;
+  if (!productId || price <= 0) { showToast('Please select a Product and enter Price', 'error'); return; }
+  var found = false;
+  for (var i = 0; i < orderItems.length; i++) {
+    if (orderItems[i].product_id === productId) {
+      orderItems[i].qty += qty;
+      orderItems[i].total = orderItems[i].qty * orderItems[i].price;
+      found = true; break;
+    }
+  }
+  if (!found) orderItems.push({ product_id: productId, name: name, qty: qty, price: price, total: qty * price });
+  renderItems();
+  sel.value = '';
+  document.getElementById('itemQty').value = 1;
+  document.getElementById('itemPrice').value = '';
+}
+
+function removeItem(idx) {
+  orderItems.splice(idx, 1);
+  renderItems();
+}
+
+function updateQty(idx, val) {
+  orderItems[idx].qty = parseInt(val) || 1;
+  orderItems[idx].total = orderItems[idx].qty * orderItems[idx].price;
+  calcTotal();
+}
+
+function renderItems() {
+  var wrap = document.getElementById('itemsTableWrap');
+  if (!orderItems.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var rows = '';
+  for (var i = 0; i < orderItems.length; i++) {
+    var it = orderItems[i];
+    rows += '<tr><td>' + it.name + '</td>';
+    rows += '<td><input type="number" value="' + it.qty + '" min="1" onchange="updateQty(' + i + ',this.value)" style="width:60px;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:13px"/></td>';
+    rows += '<td>Rs.' + it.price.toFixed(2) + '</td>';
+    rows += '<td>Rs.' + it.total.toFixed(2) + '</td>';
+    rows += '<td><button class="btn-danger" style="padding:4px 10px;font-size:12px" onclick="removeItem(' + i + ')">X</button></td></tr>';
+  }
+  document.getElementById('itemsBody').innerHTML = rows;
+  calcTotal();
+}
+
+function calcTotal() {
+  var sub = 0;
+  for (var i = 0; i < orderItems.length; i++) sub += orderItems[i].total;
+  var gstPct = parseFloat(document.getElementById('gstPct').value) || 0;
+  var gst = sub * gstPct / 100;
+  var disc = parseFloat(document.getElementById('discount').value) || 0;
+  var grand = sub + gst - disc;
+  document.getElementById('subtotal').textContent = 'Rs.' + sub.toFixed(2);
+  document.getElementById('gstAmt').textContent = 'Rs.' + gst.toFixed(2);
+  document.getElementById('grandTotal').textContent = 'Rs.' + grand.toFixed(2);
+}
+
+async function loadOrders() {
+  try {
+    allOrders = await API.get('/orders');
+    renderOrders(allOrders);
+    updateStats(allOrders);
+  } catch(e) {
+    document.getElementById('ordersList').innerHTML = '<div class="list-empty">No orders yet. Place your first order!</div>';
+  }
+}
+
+function updateStats(orders) {
+  var today = new Date().toISOString().split('T')[0];
+  var todayCount = 0;
+  var revenue = 0;
+  for (var i = 0; i < orders.length; i++) {
+    if ((orders[i].created_at || '').indexOf(today) === 0) todayCount++;
+    if (orders[i].status === 'completed') revenue += (orders[i].grand_total || 0);
+  }
+  document.getElementById('totalOrders').textContent = orders.length;
+  document.getElementById('todayOrders').textContent = todayCount;
+  document.getElementById('totalRevenue').textContent = 'Rs.' + revenue.toLocaleString();
+}
+
+function renderOrders(orders) {
+  var el = document.getElementById('ordersList');
+  if (!orders.length) { el.innerHTML = '<div class="list-empty">No orders found.</div>'; return; }
+  var html = '';
+  for (var i = 0; i < orders.length; i++) {
+    var o = orders[i];
+    var storeName = '---';
+    for (var j = 0; j < allStores.length; j++) {
+      if (allStores[j]._id === o.store_id) { storeName = allStores[j].name; break; }
+    }
+    var itemCount = o.items ? o.items.length : 0;
+    var orderNum = o.order_number || o._id.slice(-6).toUpperCase();
+    html += '<div class="order-card">';
+    html += '<div class="order-card-header">';
+    html += '<span class="order-num">Order #' + orderNum + '</span>';
+    html += '<span class="order-status ' + o.status + '">' + o.status + '</span>';
+    html += '</div>';
+    html += '<div class="order-meta">';
+    html += (o.customer_name || '---') + ' | ' + storeName + ' | ' + itemCount + ' items | ' + (o.date || formatDate(o.created_at));
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+    html += '<strong style="color:var(--accent);font-size:18px">Rs.' + (o.grand_total || 0).toLocaleString() + '</strong>';
+    html += '<div class="order-actions">';
+    html += '<button class="btn-submit" style="padding:7px 14px;font-size:12px" onclick="showBill(\'' + o._id + '\')">Invoice</button>';
+    html += '<button class="btn-secondary" style="padding:7px 14px;font-size:12px" onclick="editOrder(\'' + o._id + '\')">Edit</button>';
+    html += '<button class="btn-danger" style="padding:7px 14px;font-size:12px" onclick="deleteOrder(\'' + o._id + '\')">Delete</button>';
+    html += '</div></div></div>';
+  }
+  el.innerHTML = html;
+}
+
+function filterOrders(query) {
+  var q = (query || '').toLowerCase();
+  var status = document.getElementById('filterStatus').value;
+  var f = [];
+  for (var i = 0; i < allOrders.length; i++) {
+    var o = allOrders[i];
+    if (status && o.status !== status) continue;
+    if (q && (o.customer_name || '').toLowerCase().indexOf(q) === -1 && (o.order_number || '').toLowerCase().indexOf(q) === -1) continue;
+    f.push(o);
+  }
+  renderOrders(f);
+}
+
+async function submitOrder() {
+  var storeId = document.getElementById('orderStore').value;
+  var custName = document.getElementById('custName').value.trim();
+  if (!storeId || !custName) { showToast('Please select Store and enter Customer Name', 'error'); return; }
+  if (!orderItems.length) { showToast('Please add at least one product', 'error'); return; }
+  var sub = 0;
+  for (var i = 0; i < orderItems.length; i++) sub += orderItems[i].total;
+  var gstPct = parseFloat(document.getElementById('gstPct').value) || 0;
+  var gst = sub * gstPct / 100;
+  var disc = parseFloat(document.getElementById('discount').value) || 0;
+  var grand = sub + gst - disc;
+  var payload = {
+    store_id: storeId,
+    order_number: 'ORD' + Date.now().toString().slice(-6),
+    customer_name: custName,
+    customer_phone: document.getElementById('custPhone').value.trim(),
+    customer_address: document.getElementById('custAddress').value.trim(),
+    items: orderItems,
+    subtotal: sub,
+    gst_percent: gstPct,
+    gst_amount: gst,
+    discount: disc,
+    grand_total: grand,
+    payment_method: document.getElementById('payMethod').value,
+    status: document.getElementById('orderStatus').value,
+    notes: document.getElementById('orderNotes').value.trim(),
+    date: new Date().toISOString().split('T')[0]
+  };
+  var id = document.getElementById('orderId').value;
+  var btn = document.getElementById('submitOrderBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    var saved;
+    if (id) { saved = await API.put('/orders/' + id, payload); showToast('Order updated!'); }
+    else    { saved = await API.post('/orders', payload); showToast('Order placed!'); }
+    resetOrderForm();
+    await loadOrders();
+    if (!id) showBill(saved._id);
+  } catch(e) { showToast(e.message || 'Error.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Place Order';
+}
+
+function showBill(id) {
+  var o = null;
+  for (var i = 0; i < allOrders.length; i++) {
+    if (allOrders[i]._id === id) { o = allOrders[i]; break; }
+  }
+  if (!o) return;
+  var store = null;
+  for (var j = 0; j < allStores.length; j++) {
+    if (allStores[j]._id === o.store_id) { store = allStores[j]; break; }
+  }
+  var orderNum = o.order_number || o._id.slice(-6).toUpperCase();
+  var infoHtml = '';
+  infoHtml += '<div><div class="bill-label">Invoice To</div>' + (o.customer_name || '---') + '<br/>' + (o.customer_phone || '') + '<br/>' + (o.customer_address || '') + '</div>';
+  infoHtml += '<div style="text-align:right"><div class="bill-label">Invoice Details</div>';
+  infoHtml += 'No: <strong>' + orderNum + '</strong><br/>';
+  infoHtml += 'Date: ' + (o.date || formatDate(o.created_at)) + '<br/>';
+  infoHtml += 'Store: ' + (store ? store.name : '---') + '<br/>';
+  if (store && store.gst_number) infoHtml += 'GST: ' + store.gst_number;
+  infoHtml += '</div>';
+  document.getElementById('billInfo').innerHTML = infoHtml;
+  var items = o.items || [];
+  var itemsHtml = '';
+  for (var k = 0; k < items.length; k++) {
+    itemsHtml += '<tr><td>' + (k+1) + '</td><td>' + items[k].name + '</td><td>' + items[k].qty + '</td><td>Rs.' + items[k].price.toFixed(2) + '</td><td>Rs.' + items[k].total.toFixed(2) + '</td></tr>';
+  }
+  document.getElementById('billItems').innerHTML = itemsHtml;
+  var totalsHtml = '';
+  totalsHtml += '<div class="bill-total-line"><span>Subtotal</span><span>Rs.' + (o.subtotal||0).toFixed(2) + '</span></div>';
+  totalsHtml += '<div class="bill-total-line"><span>GST (' + (o.gst_percent||0) + '%)</span><span>Rs.' + (o.gst_amount||0).toFixed(2) + '</span></div>';
+  if (o.discount) totalsHtml += '<div class="bill-total-line"><span>Discount</span><span>-Rs.' + (o.discount||0).toFixed(2) + '</span></div>';
+  totalsHtml += '<div class="bill-total-line grand"><span>TOTAL</span><span>Rs.' + (o.grand_total||0).toFixed(2) + '</span></div>';
+  totalsHtml += '<div style="margin-top:8px;font-size:11px;color:#666">Payment: ' + (o.payment_method||'Cash').toUpperCase() + '</div>';
+  document.getElementById('billTotals').innerHTML = totalsHtml;
+  document.getElementById('billModal').classList.add('show');
+}
+
+function editOrder(id) {
+  var o = null;
+  for (var i = 0; i < allOrders.length; i++) {
+    if (allOrders[i]._id === id) { o = allOrders[i]; break; }
+  }
+  if (!o) return;
+  document.getElementById('orderId').value = o._id;
+  document.getElementById('orderStore').value = o.store_id;
+  document.getElementById('custName').value = o.customer_name || '';
+  document.getElementById('custPhone').value = o.customer_phone || '';
+  document.getElementById('custAddress').value = o.customer_address || '';
+  document.getElementById('payMethod').value = o.payment_method || 'cash';
+  document.getElementById('orderStatus').value = o.status || 'completed';
+  document.getElementById('orderNotes').value = o.notes || '';
+  document.getElementById('discount').value = o.discount || 0;
+  document.getElementById('gstPct').value = o.gst_percent || 18;
+  orderItems = o.items ? JSON.parse(JSON.stringify(o.items)) : [];
+  renderItems();
+  loadStoreProducts();
+  document.getElementById('orderFormTitle').textContent = 'Edit Order';
+  document.getElementById('submitOrderBtn').textContent = 'Update Order';
+  document.getElementById('cancelOrderBtn').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetOrderForm() {
+  document.getElementById('orderId').value = '';
+  document.getElementById('orderStore').value = '';
+  document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
+  document.getElementById('custAddress').value = '';
+  document.getElementById('payMethod').value = 'cash';
+  document.getElementById('orderStatus').value = 'completed';
+  document.getElementById('orderNotes').value = '';
+  document.getElementById('discount').value = 0;
+  document.getElementById('gstPct').value = 18;
+  document.getElementById('productSelect').innerHTML = '<option value="">Select product...</option>';
+  orderItems = [];
+  renderItems();
+  document.getElementById('orderFormTitle').textContent = 'New Order';
+  document.getElementById('submitOrderBtn').textContent = 'Place Order';
+  document.getElementById('cancelOrderBtn').style.display = 'none';
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Are you sure you want to delete this order?')) return;
+  try { await API.delete('/orders/' + id); showToast('Order deleted.'); loadOrders(); }
+  catch(e) { showToast(e.message, 'error'); }
+}
+
+init();
+</script>
+</body>
+</html>

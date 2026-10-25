@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Login — DigitalBooster</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#e8e8f0;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-wrap{width:100%;max-width:420px;padding:20px}
+.logo{text-align:center;margin-bottom:40px}
+.logo-icon{font-size:48px;display:block;margin-bottom:12px}
+.logo-name{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#f0c040;letter-spacing:-1px}
+.logo-sub{color:#8888aa;font-size:14px;margin-top:4px}
+.card{background:#16161f;border:1px solid #2a2a38;border-radius:16px;padding:36px}
+.card-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px}
+.card-sub{color:#8888aa;font-size:14px;margin-bottom:28px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#8888aa;margin-bottom:6px;letter-spacing:0.5px}
+.form-group input{width:100%;background:#111118;border:1px solid #2a2a38;border-radius:8px;color:#e8e8f0;font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;outline:none;transition:all 0.2s}
+.form-group input:focus{border-color:#f0c040;box-shadow:0 0 0 3px rgba(240,192,64,0.08)}
+.password-wrap{position:relative}
+.password-wrap input{padding-right:44px}
+.show-pass{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#8888aa;cursor:pointer;font-size:16px;padding:4px}
+.show-pass:hover{color:#e8e8f0}
+.btn-login{width:100%;background:#f0c040;color:#111;padding:13px;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:8px}
+.btn-login:hover{background:#f5d060;transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,192,64,0.25)}
+.btn-login:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.error-box{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:8px;padding:12px 16px;font-size:13px;color:#ff4d6d;margin-bottom:16px;display:none}
+.error-box.show{display:block}
+.hint-box{background:rgba(240,192,64,0.06);border:1px solid rgba(240,192,64,0.15);border-radius:8px;padding:12px 16px;font-size:12px;color:#8888aa;margin-top:20px;text-align:center}
+.hint-box strong{color:#f0c040}
+.divider{border:none;border-top:1px solid #2a2a38;margin:24px 0}
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="logo">
+    <span class="logo-icon">&#9889;</span>
+    <div class="logo-name">DigitalBooster</div>
+    <div class="logo-sub">Local Store Management Platform</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Welcome Back &#128075;</div>
+    <div class="card-sub">Sign in to your admin account</div>
+
+    <div class="error-box" id="errorBox">
+      &#10060; Invalid username or password. Please try again.
+    </div>
+
+    <div class="form-group">
+      <label>USERNAME</label>
+      <input type="text" id="username" placeholder="Enter username" onkeydown="handleKey(event)"/>
+    </div>
+
+    <div class="form-group">
+      <label>PASSWORD</label>
+      <div class="password-wrap">
+        <input type="password" id="password" placeholder="Enter password" onkeydown="handleKey(event)"/>
+        <button class="show-pass" onclick="togglePassword()" type="button" id="eyeBtn">&#128065;</button>
+      </div>
+    </div>
+
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">Sign In</button>
+
+    <hr class="divider"/>
+
+    <div class="hint-box">
+      &#128274; Default credentials<br/>
+      Username: <strong>admin</strong> &nbsp;|&nbsp; Password: <strong>admin123</strong>
+    </div>
+  </div>
+</div>
+
+<script>
+var USERS = [
+  { username: 'admin', password: 'admin123', role: 'Admin' },
+  { username: 'manager', password: 'manager123', role: 'Manager' },
+  { username: 'lavanya', password: 'lavanya123', role: 'Admin' }
+];
+
+function handleKey(e) {
+  if (e.key === 'Enter') doLogin();
+}
+
+function togglePassword() {
+  var inp = document.getElementById('password');
+  var btn = document.getElementById('eyeBtn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.innerHTML = '&#128064;';
+  } else {
+    inp.type = 'password';
+    btn.innerHTML = '&#128065;';
+  }
+}
+
+function doLogin() {
+  var username = document.getElementById('username').value.trim();
+  var password = document.getElementById('password').value.trim();
+  var errorBox = document.getElementById('errorBox');
+  var btn = document.getElementById('loginBtn');
+
+  errorBox.classList.remove('show');
+
+  if (!username || !password) {
+    errorBox.innerHTML = '&#10060; Please enter both username and password.';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+
+  setTimeout(function() {
+    var found = null;
+    for (var i = 0; i < USERS.length; i++) {
+      if (USERS[i].username === username && USERS[i].password === password) {
+        found = USERS[i];
+        break;
+      }
+    }
+
+    if (found) {
+      sessionStorage.setItem('db_user', JSON.stringify({ username: found.username, role: found.role, loginTime: new Date().toISOString() }));
+      window.location.href = '../index.html';
+    } else {
+      errorBox.innerHTML = '&#10060; Invalid username or password. Please try again.';
+      errorBox.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+      document.getElementById('password').value = '';
+      document.getElementById('password').focus();
+    }
+  }, 800);
+}
+
+if (sessionStorage.getItem('db_user')) {
+  window.location.href = '../index.html';
+}
+</script>
+</body>
+</html>

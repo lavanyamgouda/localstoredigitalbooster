@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Payments - DigitalBooster</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+.pay-status{display:inline-block;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600}
+.pay-status.paid{background:rgba(61,255,160,0.12);color:var(--green)}
+.pay-status.pending{background:rgba(240,192,64,0.12);color:var(--accent)}
+.pay-status.unpaid{background:rgba(255,77,109,0.12);color:var(--red)}
+.method-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.method-badge.cash{background:rgba(61,255,160,0.1);color:var(--green)}
+.method-badge.upi{background:rgba(77,159,255,0.1);color:var(--blue)}
+.method-badge.card{background:rgba(255,107,53,0.1);color:var(--accent2)}
+.method-badge.credit{background:rgba(240,192,64,0.1);color:var(--accent)}
+.method-badge.bank{background:rgba(150,100,255,0.1);color:#a78bfa}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.summary-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
+.summary-box .val{font-family:var(--font-head);font-size:28px;font-weight:800;color:var(--accent)}
+.summary-box .lbl{color:var(--text2);font-size:12px;margin-top:4px}
+.receipt-wrap{display:none;background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:28px;margin-top:24px}
+.receipt-wrap.show{display:block}
+.receipt-title{font-family:var(--font-head);font-size:20px;font-weight:800;text-align:center;margin-bottom:20px;color:var(--accent)}
+.receipt-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,42,56,0.5);font-size:14px}
+.receipt-row:last-child{border:none;font-weight:700;font-size:16px;color:var(--accent)}
+.receipt-divider{border:none;border-top:1px dashed var(--border);margin:12px 0}
+.print-btn{background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px;width:100%;font-family:var(--font-body)}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.filter-bar input,.filter-bar select{background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-family:var(--font-body);outline:none}
+.filter-bar input{flex:1;min-width:160px}
+</style>
+</head>
+<body>
+  <script src="js/auth.js"></script>
+<nav class="navbar">
+<div class="nav-brand"><span class="brand-icon">&#9889;</span><span class="brand-name">DigitalBooster</span></div>
+<ul class="nav-links">
+<li><a href="../index.html">Dashboard</a></li>
+<li><a href="stores.html">Stores</a></li>
+<li><a href="products.html">Products</a></li>
+<li><a href="analytics.html">Analytics</a></li>
+<li><a href="campaigns.html">Campaigns</a></li>
+<li><a href="payments.html" class="active">Payments</a></li>
+</ul>
+<div class="nav-actions"><div class="avatar">AS</div></div>
+</nav>
+
+<div class="page-header">
+<div><h1>&#128179; Payments</h1><p>Record and manage customer payments</p></div>
+</div>
+
+<div class="two-col">
+<div>
+<div class="form-wrap">
+<h2 class="form-title" id="formTitle">Record New Payment</h2>
+<input type="hidden" id="paymentId"/>
+<div class="form-group">
+<label>Store</label>
+<select id="payStore"><option value="">Select store...</option></select>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label>Customer Name *</label>
+<input type="text" id="custName" placeholder="Full name"/>
+</div>
+<div class="form-group">
+<label>Phone</label>
+<input type="tel" id="custPhone" placeholder="9876543210"/>
+</div>
+</div>
+<div class="form-group">
+<label>Amount (Rs.) *</label>
+<input type="number" id="payAmount" placeholder="0.00" min="0" step="0.01"/>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label>Payment Method *</label>
+<select id="payMethod">
+<option value="cash">Cash</option>
+<option value="upi">UPI</option>
+<option value="card">Card</option>
+<option value="bank">Bank Transfer</option>
+<option value="credit">Credit / Khata</option>
+</select>
+</div>
+<div class="form-group">
+<label>Status *</label>
+<select id="payStatus">
+<option value="paid">Paid</option>
+<option value="pending">Pending</option>
+<option value="unpaid">Unpaid</option>
+</select>
+</div>
+</div>
+<div class="form-group" id="upiField" style="display:none">
+<label>UPI Transaction ID</label>
+<input type="text" id="upiTxId" placeholder="e.g. 3289XYZ123456"/>
+</div>
+<div class="form-group">
+<label>Description / Items</label>
+<textarea id="payDesc" rows="2" placeholder="e.g. Grocery items, 2kg rice..."></textarea>
+</div>
+<div class="form-group">
+<label>Date</label>
+<input type="date" id="payDate"/>
+</div>
+<div style="display:flex;gap:12px;margin-top:8px">
+<button class="btn-submit" id="submitBtn" onclick="submitPayment()">Save Payment</button>
+<button class="btn-secondary" id="cancelBtn" onclick="resetForm()" style="display:none">Cancel</button>
+</div>
+</div>
+
+<div class="receipt-wrap" id="receiptWrap">
+<div class="receipt-title">Payment Receipt</div>
+<div id="receiptContent"></div>
+<button class="print-btn" onclick="printReceipt()">Print Receipt</button>
+<button class="print-btn" id="closeReceiptBtn" style="margin-top:8px;background:transparent;color:var(--text2)">Close</button>
+</div>
+</div>
+
+<div>
+<div class="summary-grid">
+<div class="summary-box"><div class="val" id="sumTotal">0</div><div class="lbl">TOTAL</div></div>
+<div class="summary-box"><div class="val" id="sumCollected" style="color:var(--green)">Rs.0</div><div class="lbl">COLLECTED</div></div>
+<div class="summary-box"><div class="val" id="sumPending" style="color:var(--accent)">Rs.0</div><div class="lbl">PENDING</div></div>
+<div class="summary-box"><div class="val" id="sumToday">0</div><div class="lbl">TODAY</div></div>
+</div>
+
+<div class="filter-bar">
+<input type="text" placeholder="Search customer..." oninput="filterPayments()" id="searchInput"/>
+<select id="filterStore" onchange="filterPayments()"><option value="">All Stores</option></select>
+<select id="filterMethod" onchange="filterPayments()">
+<option value="">All Methods</option>
+<option value="cash">Cash</option>
+<option value="upi">UPI</option>
+<option value="card">Card</option>
+<option value="bank">Bank</option>
+<option value="credit">Credit</option>
+</select>
+<select id="filterStatus" onchange="filterPayments()">
+<option value="">All Status</option>
+<option value="paid">Paid</option>
+<option value="pending">Pending</option>
+<option value="unpaid">Unpaid</option>
+</select>
+</div>
+
+<div class="activity-table-wrap">
+<table class="activity-table">
+<thead>
+<tr>
+<th>Customer</th><th>Store</th><th>Amount</th>
+<th>Method</th><th>Date</th><th>Status</th><th>Actions</th>
+</tr>
+</thead>
+<tbody id="txBody">
+<tr><td colspan="7" class="loading-row">Loading payments...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+var allPayments = [];
+var allStores = [];
+
+document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+
+document.getElementById('closeReceiptBtn').onclick = function() {
+  document.getElementById('receiptWrap').classList.remove('show');
+};
+
+document.getElementById('payMethod').addEventListener('change', function() {
+  document.getElementById('upiField').style.display = this.value === 'upi' ? 'block' : 'none';
+});
+
+async function init() {
+  try {
+    allStores = await API.get('/stores');
+    var sel = document.getElementById('payStore');
+    var fs = document.getElementById('filterStore');
+    for (var i = 0; i < allStores.length; i++) {
+      var s = allStores[i];
+      sel.innerHTML += '<option value="' + s._id + '">' + s.name + '</option>';
+      fs.innerHTML += '<option value="' + s._id + '">' + s.name + '</option>';
+    }
+  } catch(e) {}
+  loadPayments();
+}
+
+async function loadPayments() {
+  try {
+    allPayments = await API.get('/payments');
+    renderPayments(allPayments);
+    updateSummary(allPayments);
+  } catch(e) {
+    document.getElementById('txBody').innerHTML = '<tr><td colspan="7" class="loading-row">No payments yet.</td></tr>';
+    updateSummary([]);
+  }
+}
+
+function updateSummary(payments) {
+  var paid = payments.filter(function(x) { return x.status === 'paid'; });
+  var pend = payments.filter(function(x) { return x.status === 'pending' || x.status === 'unpaid'; });
+  var today = new Date().toISOString().split('T')[0];
+  var td = payments.filter(function(x) { return (x.date || x.created_at || '').startsWith(today); });
+  document.getElementById('sumTotal').textContent = payments.length;
+  document.getElementById('sumCollected').textContent = 'Rs.' + paid.reduce(function(s, x) { return s + (x.amount || 0); }, 0).toLocaleString();
+  document.getElementById('sumPending').textContent = 'Rs.' + pend.reduce(function(s, x) { return s + (x.amount || 0); }, 0).toLocaleString();
+  document.getElementById('sumToday').textContent = td.length;
+}
+
+function ml(m) {
+  var labels = { cash: 'Cash', upi: 'UPI', card: 'Card', bank: 'Bank', credit: 'Credit' };
+  return labels[m] || m || '---';
+}
+
+function renderPayments(payments) {
+  var tbody = document.getElementById('txBody');
+  if (!payments.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-row">No payments found.</td></tr>';
+    return;
+  }
+  var rows = '';
+  for (var i = 0; i < payments.length; i++) {
+    var p = payments[i];
+    var store = null;
+    for (var j = 0; j < allStores.length; j++) {
+      if (allStores[j]._id === p.store_id) { store = allStores[j]; break; }
+    }
+    rows += '<tr>';
+    rows += '<td><strong>' + (p.customer_name || '') + '</strong>';
+    if (p.customer_phone) rows += '<br><span style="color:var(--text2);font-size:12px">' + p.customer_phone + '</span>';
+    rows += '</td>';
+    rows += '<td>' + (store ? store.name : '---') + '</td>';
+    rows += '<td><strong style="color:var(--accent)">Rs.' + (p.amount || 0).toLocaleString() + '</strong></td>';
+    rows += '<td><span class="method-badge ' + (p.payment_method || '') + '">' + ml(p.payment_method) + '</span></td>';
+    rows += '<td style="font-size:12px">' + (p.date || formatDate(p.created_at)) + '</td>';
+    rows += '<td><span class="pay-status ' + p.status + '">' + p.status + '</span></td>';
+    rows += '<td><div style="display:flex;gap:6px">';
+    rows += '<button class="btn-secondary" style="padding:5px 10px;font-size:11px" onclick="showReceipt(\'' + p._id + '\')">Receipt</button>';
+    rows += '<button class="btn-secondary" style="padding:5px 10px;font-size:11px" onclick="editPayment(\'' + p._id + '\')">Edit</button>';
+    rows += '<button class="btn-danger" style="padding:5px 10px;font-size:11px" onclick="deletePayment(\'' + p._id + '\')">Del</button>';
+    rows += '</div></td></tr>';
+  }
+  tbody.innerHTML = rows;
+}
+
+function filterPayments() {
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  var store = document.getElementById('filterStore').value;
+  var method = document.getElementById('filterMethod').value;
+  var status = document.getElementById('filterStatus').value;
+  var f = allPayments;
+  if (store) f = f.filter(function(p) { return p.store_id === store; });
+  if (method) f = f.filter(function(p) { return p.payment_method === method; });
+  if (status) f = f.filter(function(p) { return p.status === status; });
+  if (q) f = f.filter(function(p) { return (p.customer_name || '').toLowerCase().includes(q) || (p.customer_phone || '').includes(q); });
+  renderPayments(f);
+}
+
+async function submitPayment() {
+  var id = document.getElementById('paymentId').value;
+  var payload = {
+    store_id: document.getElementById('payStore').value,
+    customer_name: document.getElementById('custName').value.trim(),
+    customer_phone: document.getElementById('custPhone').value.trim(),
+    amount: parseFloat(document.getElementById('payAmount').value) || 0,
+    payment_method: document.getElementById('payMethod').value,
+    upi_txn_id: document.getElementById('upiTxId').value.trim(),
+    status: document.getElementById('payStatus').value,
+    description: document.getElementById('payDesc').value.trim(),
+    date: document.getElementById('payDate').value
+  };
+  if (!payload.customer_name || payload.amount <= 0) {
+    showToast('Customer name and amount required.', 'error');
+    return;
+  }
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    var saved;
+    if (id) {
+      saved = await API.put('/payments/' + id, payload);
+      showToast('Payment updated!');
+    } else {
+      saved = await API.post('/payments', payload);
+      showToast('Payment saved!');
+    }
+    resetForm();
+    await loadPayments();
+    if (!id) showReceipt(saved._id);
+  } catch(e) {
+    showToast(e.message || 'Error.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Payment';
+  }
+}
+
+function showReceipt(id) {
+  var p = null;
+  for (var i = 0; i < allPayments.length; i++) {
+    if (allPayments[i]._id === id) { p = allPayments[i]; break; }
+  }
+  if (!p) return;
+  var store = null;
+  for (var j = 0; j < allStores.length; j++) {
+    if (allStores[j]._id === p.store_id) { store = allStores[j]; break; }
+  }
+  var h = '';
+  h += '<div class="receipt-row"><span>Store</span><span>' + (store ? store.name : '---') + '</span></div>';
+  h += '<div class="receipt-row"><span>Customer</span><span>' + (p.customer_name || '') + '</span></div>';
+  if (p.customer_phone) h += '<div class="receipt-row"><span>Phone</span><span>' + p.customer_phone + '</span></div>';
+  h += '<div class="receipt-row"><span>Date</span><span>' + (p.date || formatDate(p.created_at)) + '</span></div>';
+  h += '<div class="receipt-row"><span>Method</span><span>' + ml(p.payment_method) + '</span></div>';
+  if (p.upi_txn_id) h += '<div class="receipt-row"><span>UPI ID</span><span>' + p.upi_txn_id + '</span></div>';
+  if (p.description) h += '<div class="receipt-row"><span>Items</span><span>' + p.description + '</span></div>';
+  h += '<hr class="receipt-divider"/>';
+  h += '<div class="receipt-row"><span>Status</span><span class="pay-status ' + p.status + '">' + p.status.toUpperCase() + '</span></div>';
+  h += '<div class="receipt-row"><span>Total</span><span>Rs.' + (p.amount || 0).toLocaleString() + '</span></div>';
+  document.getElementById('receiptContent').innerHTML = h;
+  document.getElementById('receiptWrap').classList.add('show');
+  document.getElementById('receiptWrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+function printReceipt() {
+  var c = document.getElementById('receiptContent').innerHTML;
+  var w = window.open('', '_blank', 'width=400,height=600');
+  var h = '<!DOCTYPE html><html><head><title>Receipt</title>';
+  h += '<style>';
+  h += 'body{font-family:monospace;padding:20px;font-size:14px}';
+  h += 'h2{text-align:center;border-bottom:2px dashed #000;padding-bottom:10px}';
+  h += '.receipt-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #ccc}';
+  h += '.receipt-row:last-child{font-weight:bold;font-size:16px;border:none}';
+  h += '.receipt-divider{border:none;border-top:1px dashed #000;margin:10px 0}';
+  h += '</style></head><body>';
+  h += '<h2>DigitalBooster</h2>';
+  h += c;
+  h += '<p style="text-align:center;margin-top:20px;font-size:12px">Thank you!</p>';
+  h += '</body></html>';
+  w.document.write(h);
+  w.document.close();
+  w.print();
+}
+
+function editPayment(id) {
+  var p = null;
+  for (var i = 0; i < allPayments.length; i++) {
+    if (allPayments[i]._id === id) { p = allPayments[i]; break; }
+  }
+  if (!p) return;
+  document.getElementById('paymentId').value = p._id;
+  document.getElementById('payStore').value = p.store_id || '';
+  document.getElementById('custName').value = p.customer_name;
+  document.getElementById('custPhone').value = p.customer_phone || '';
+  document.getElementById('payAmount').value = p.amount;
+  document.getElementById('payMethod').value = p.payment_method || 'cash';
+  document.getElementById('upiTxId').value = p.upi_txn_id || '';
+  document.getElementById('payStatus').value = p.status || 'paid';
+  document.getElementById('payDesc').value = p.description || '';
+  document.getElementById('payDate').value = p.date || '';
+  document.getElementById('upiField').style.display = p.payment_method === 'upi' ? 'block' : 'none';
+  document.getElementById('formTitle').textContent = 'Edit Payment';
+  document.getElementById('submitBtn').textContent = 'Update Payment';
+  document.getElementById('cancelBtn').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetForm() {
+  document.getElementById('paymentId').value = '';
+  var fields = ['custName', 'custPhone', 'payAmount', 'upiTxId', 'payDesc'];
+  for (var i = 0; i < fields.length; i++) {
+    document.getElementById(fields[i]).value = '';
+  }
+  document.getElementById('payStore').value = '';
+  document.getElementById('payMethod').value = 'cash';
+  document.getElementById('payStatus').value = 'paid';
+  document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('upiField').style.display = 'none';
+  document.getElementById('formTitle').textContent = 'Record New Payment';
+  document.getElementById('submitBtn').textContent = 'Save Payment';
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+async function deletePayment(id) {
+  if (!confirm('Delete this payment?')) return;
+  try {
+    await API.delete('/payments/' + id);
+    showToast('Deleted.');
+    loadPayments();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

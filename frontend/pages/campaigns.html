@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Campaigns — DigitalBooster</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <script src="js/auth.js"></script>
+  <nav class="navbar">
+    <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-name">DigitalBooster</span></div>
+    <ul class="nav-links">
+      <li><a href="../index.html">Dashboard</a></li>
+      <li><a href="stores.html">Stores</a></li>
+      <li><a href="orders.html">Orders</a></li>
+      <li><a href="products.html">Products</a></li>
+      <li><a href="analytics.html">Analytics</a></li>
+      <li><a href="campaigns.html" class="active">Campaigns</a></li>
+    </ul>
+    <div class="nav-actions"><div class="avatar">AS</div></div>
+  </nav>
+
+  <div class="page-header">
+    <div><h1>📣 Campaigns</h1><p>Create and manage digital marketing campaigns</p></div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="form-wrap">
+        <h2 class="form-title" id="campFormTitle">Create Campaign</h2>
+        <input type="hidden" id="campId" />
+        <div class="form-group">
+          <label>Campaign Name *</label>
+          <input type="text" id="campName" placeholder="e.g. Diwali Mega Sale" required />
+        </div>
+        <div class="form-group">
+          <label>Store *</label>
+          <select id="campStore" required>
+            <option value="">Select store...</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Type</label>
+            <select id="campType">
+              <option>Social Media</option>
+              <option>SMS</option>
+              <option>WhatsApp</option>
+              <option>Email</option>
+              <option>Flyer / Poster</option>
+              <option>Offer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Budget (₹)</label>
+            <input type="number" id="campBudget" placeholder="5000" min="0" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" id="campStart" required />
+          </div>
+          <div class="form-group">
+            <label>End Date *</label>
+            <input type="date" id="campEnd" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Target Audience</label>
+          <input type="text" id="campAudience" placeholder="e.g. Local residents within 5km" />
+        </div>
+        <div class="form-group">
+          <label>Campaign Message *</label>
+          <textarea id="campMessage" rows="3" placeholder="Write your campaign message here..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Discount / Offer</label>
+          <input type="text" id="campDiscount" placeholder="e.g. 20% off on all items" />
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="btn-submit" onclick="submitCampaign()">Launch Campaign</button>
+          <button class="btn-secondary" onclick="resetCampForm()" id="cancelCampBtn" style="display:none">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-ghost" onclick="filterByStatus('')" id="filterAll" style="padding:8px 18px;font-size:13px;">All</button>
+        <button class="btn-ghost" onclick="filterByStatus('active')" style="padding:8px 18px;font-size:13px;">Active</button>
+        <button class="btn-ghost" onclick="filterByStatus('draft')" style="padding:8px 18px;font-size:13px;">Draft</button>
+        <button class="btn-ghost" onclick="filterByStatus('ended')" style="padding:8px 18px;font-size:13px;">Ended</button>
+      </div>
+      <div id="campaignsList"><div class="list-empty">Loading campaigns...</div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    let allCampaigns = [], allStores = [];
+
+    async function init() {
+      try { allStores = await API.get('/stores'); populateStoreSelect(); } catch(e) {}
+      loadCampaigns();
+    }
+
+    function populateStoreSelect() {
+      const sel = document.getElementById('campStore');
+      allStores.forEach(s => sel.innerHTML += `<option value="${s._id}">${s.name}</option>`);
+    }
+
+    async function loadCampaigns() {
+      try {
+        allCampaigns = await API.get('/campaigns');
+        renderCampaigns(allCampaigns);
+      } catch(e) {
+        document.getElementById('campaignsList').innerHTML = '<div class="list-empty">Could not load campaigns.</div>';
+      }
+    }
+
+    function renderCampaigns(campaigns) {
+      const el = document.getElementById('campaignsList');
+      if (!campaigns.length) { el.innerHTML = '<div class="list-empty">No campaigns yet. Create your first one!</div>'; return; }
+      el.innerHTML = campaigns.map(c => {
+        const store = allStores.find(s => s._id === c.store_id);
+        const start = new Date(c.start_date);
+        const end = new Date(c.end_date);
+        const now = new Date();
+        let status = c.status || 'draft';
+        if (now >= start && now <= end) status = 'active';
+        else if (now > end) status = 'ended';
+        const progress = status === 'ended' ? 100
+          : status === 'active' ? Math.round(((now - start)/(end - start))*100) : 0;
+        const tagClass = status === 'active' ? 'tag-green' : status === 'ended' ? 'tag-orange' : 'tag-blue';
+        return `
+        <div class="campaign-card">
+          <div class="campaign-header">
+            <span class="campaign-name">${c.name}</span>
+            <span class="tag ${tagClass}">${status.toUpperCase()}</span>
+          </div>
+          <div class="campaign-meta">
+            🏪 ${store ? store.name : '—'} &nbsp;·&nbsp; 📋 ${c.type || 'Campaign'}
+            &nbsp;·&nbsp; 📅 ${formatDate(c.start_date)} → ${formatDate(c.end_date)}
+            ${c.budget ? `&nbsp;·&nbsp; 💰 ₹${c.budget.toLocaleString()}` : ''}
+          </div>
+          ${c.message ? `<p style="font-size:13px;color:var(--text2);margin-bottom:12px;">${c.message}</p>` : ''}
+          ${c.discount ? `<p style="font-size:13px;color:var(--accent);margin-bottom:12px;">🎁 ${c.discount}</p>` : ''}
+          <div class="campaign-progress"><div class="campaign-bar" style="width:${progress}%"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+            <span style="font-size:12px;color:var(--text2)">${progress}% complete</span>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-secondary" style="padding:6px 14px;font-size:12px" onclick="editCampaign('${c._id}')">Edit</button>
+              <button class="btn-danger" onclick="deleteCampaign('${c._id}')">Delete</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function filterByStatus(status) {
+      if (!status) renderCampaigns(allCampaigns);
+      else renderCampaigns(allCampaigns.filter(c => {
+        const now = new Date(), s = new Date(c.start_date), e = new Date(c.end_date);
+        if (status === 'active') return now >= s && now <= e;
+        if (status === 'ended') return now > e;
+        return c.status === 'draft' || now < s;
+      }));
+    }
+
+    async function submitCampaign() {
+      const id = document.getElementById('campId').value;
+      const payload = {
+        name: document.getElementById('campName').value.trim(),
+        store_id: document.getElementById('campStore').value,
+        type: document.getElementById('campType').value,
+        budget: parseFloat(document.getElementById('campBudget').value) || 0,
+        start_date: document.getElementById('campStart').value,
+        end_date: document.getElementById('campEnd').value,
+        target_audience: document.getElementById('campAudience').value.trim(),
+        message: document.getElementById('campMessage').value.trim(),
+        discount: document.getElementById('campDiscount').value.trim(),
+        status: 'draft',
+      };
+      if (!payload.name || !payload.store_id || !payload.start_date || !payload.end_date || !payload.message) {
+        showToast('Please fill all required fields.', 'error'); return;
+      }
+      try {
+        if (id) { await API.put(`/campaigns/${id}`, payload); showToast('Campaign updated!'); }
+        else    { await API.post('/campaigns', payload); showToast('Campaign launched! 🚀'); }
+        resetCampForm(); loadCampaigns();
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    function editCampaign(id) {
+      const c = allCampaigns.find(x => x._id === id);
+      if (!c) return;
+      document.getElementById('campId').value = c._id;
+      document.getElementById('campName').value = c.name;
+      document.getElementById('campStore').value = c.store_id;
+      document.getElementById('campType').value = c.type || 'Social Media';
+      document.getElementById('campBudget').value = c.budget || '';
+      document.getElementById('campStart').value = c.start_date?.split('T')[0] || '';
+      document.getElementById('campEnd').value = c.end_date?.split('T')[0] || '';
+      document.getElementById('campAudience').value = c.target_audience || '';
+      document.getElementById('campMessage').value = c.message || '';
+      document.getElementById('campDiscount').value = c.discount || '';
+      document.getElementById('campFormTitle').textContent = 'Edit Campaign';
+      document.querySelector('.form-wrap .btn-submit').textContent = 'Update Campaign';
+      document.getElementById('cancelCampBtn').style.display = 'block';
+    }
+
+    function resetCampForm() {
+      document.getElementById('campId').value = '';
+      ['campName','campBudget','campStart','campEnd','campAudience','campMessage','campDiscount'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('campStore').value = '';
+      document.getElementById('campFormTitle').textContent = 'Create Campaign';
+      document.querySelector('.form-wrap .btn-submit').textContent = 'Launch Campaign';
+      document.getElementById('cancelCampBtn').style.display = 'none';
+    }
+
+    async function deleteCampaign(id) {
+      if (!confirm('Delete this campaign?')) return;
+      try { await API.delete(`/campaigns/${id}`); showToast('Campaign deleted.'); loadCampaigns(); }
+      catch(e) { showToast(e.message, 'error'); }
+    }
+
+    init();
+  </script>
+</body>
+</html>
